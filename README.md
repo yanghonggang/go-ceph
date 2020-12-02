@@ -25,12 +25,12 @@ RBD, & CephFS library and development headers are expected to be installed.
 
 On debian based systems (apt) these may be:
 ```sh
-libcephfs-dev librbd-dev librados-dev
+libcephfs-dev librbd-dev librados-dev librgw-dev
 ```
 
 On rpm based systems (dnf, yum, etc) these may be:
 ```sh
-libcephfs-devel librbd-devel librados-devel
+libcephfs-devel librbd-devel librados-devel librgw-devel
 ```
 
 To quickly test if one can build with go-ceph on your system, run:
