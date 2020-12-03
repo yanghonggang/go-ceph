@@ -20,7 +20,9 @@ type LibRGW struct {
 // int librgw_create(librgw_t *rgw, int argc, char **argv)
 func createRGW(argc C.int, argv **C.char) (*LibRGW, error) {
 	libRGW := &LibRGW{}
-	if ret := C.librgw_create(libRGW.rgw, argc, argv); ret == 0 {
+	var rgw C.librgw_t
+	if ret := C.librgw_create(&rgw, argc, argv); ret == 0 {
+		libRGW.rgw = &rgw
 		return libRGW, nil
 	} else {
 		return nil, getError(ret)
