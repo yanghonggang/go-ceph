@@ -13,23 +13,23 @@ import (
 )
 
 // typedef void* librgw_t;
-type LibRGW struct {
-	rgw *C.librgw_t
+type RGW struct {
+	libRGW *C.librgw_t
 }
 
 // int librgw_create(librgw_t *rgw, int argc, char **argv)
-func createRGW(argc C.int, argv **C.char) (*LibRGW, error) {
-	libRGW := &LibRGW{}
-	var rgw C.librgw_t
-	if ret := C.librgw_create(&rgw, argc, argv); ret == 0 {
-		libRGW.rgw = &rgw
-		return libRGW, nil
+func createRGW(argc C.int, argv **C.char) (*RGW, error) {
+	rgw := &RGW{}
+	var libRGW C.librgw_t
+	if ret := C.librgw_create(&libRGW, argc, argv); ret == 0 {
+		rgw.libRGW = &libRGW
+		return rgw, nil
 	} else {
 		return nil, getError(ret)
 	}
 }
 
-func CreateRGW(argv []string) (*LibRGW, error) {
+func CreateRGW(argv []string) (*RGW, error) {
 	cargv := make([]*C.char, len(argv))
 	for i := range argv {
 		cargv[i] = C.CString(argv[i])
@@ -40,8 +40,8 @@ func CreateRGW(argv []string) (*LibRGW, error) {
 }
 
 // void librgw_shutdown(librgw_t rgw)
-func ShutdownRGW(libRGW *LibRGW) {
-	C.librgw_shutdown(*libRGW.rgw)
+func ShutdownRGW(rgw *RGW) {
+	C.librgw_shutdown(*rgw.libRGW)
 }
 
 // FS exports ceph's rgw_fs from include/rados/rgw_file.h
@@ -51,8 +51,8 @@ type FS struct {
 
 // int rgw_mount(librgw_t rgw, const char *uid, const char *key,
 //               const char *secret, rgw_fs **fs, uint32_t flags)
-func (fs *FS) Mount(libRGW *LibRGW, uid, key, secret *C.char, flags C.uint) error {
-	ret := C.rgw_mount(*libRGW.rgw, uid, key, secret, &fs.rgwFS, flags)
+func (fs *FS) Mount(rgw *RGW, uid, key, secret *C.char, flags C.uint) error {
+	ret := C.rgw_mount(*rgw.libRGW, uid, key, secret, &fs.rgwFS, flags)
 	if ret != 0 {
 		return getError(ret)
 	}
