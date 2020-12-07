@@ -3,14 +3,26 @@ package rgw
 /*
 #cgo LDFLAGS: -lrgw
 #include <stdlib.h>
+#include <sys/stat.h>
 #include <rados/librgw.h>
 #include <rados/rgw_file.h>
+
+// readdir_callback.go
+extern bool common_readdir_cb(const char *name, void *arg, uint64_t offset,
+                       struct stat *st, uint32_t mask,
+                       uint32_t flags);
 */
 import "C"
 
 import (
+	//	"syscall"
 	"unsafe"
 )
+
+//export goCommonReadDirCallback
+func goCommonReadDirCallback(name *C.char) bool {
+	return true
+}
 
 // typedef void* librgw_t;
 type RGW struct {
@@ -132,3 +144,32 @@ func (fs *FS) StatFS(pFH *FileHandle, flags uint32) (*StatVFS, error) {
 		return stat, nil
 	}
 }
+
+// syscall.Stat_t
+// type Stat_t struct {
+//     Dev       uint64
+//     Ino       uint64
+//     Nlink     uint64
+//     Mode      uint32
+//     Uid       uint32
+//     Gid       uint32
+//     X__pad0   int32
+//     Rdev      uint64
+//     Size      int64
+//     Blksize   int64
+//     Blocks    int64
+//     Atim      Timespec
+//     Mtim      Timespec
+//     Ctim      Timespec
+//     X__unused [3]int64
+// }
+// typedef bool (*rgw_readdir_cb)(const char *name, void *arg, uint64_t offset,
+//                                struct stat *st, uint32_t mask,
+//                                uint32_t flags);
+type ReadDirCallback struct {
+}
+
+// int rgw_readdir(struct rgw_fs *rgw_fs,
+//                 struct rgw_file_handle *parent_fh, uint64_t *offset,
+//                 rgw_readdir_cb rcb, void *cb_arg, bool *eof,
+//                 uint32_t flags)
