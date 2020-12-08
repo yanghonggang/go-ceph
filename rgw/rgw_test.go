@@ -30,6 +30,8 @@ func TestMountUmount(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Println(">>>> statVFS.Blocks ", statVFS.Blocks)
 
+	fs.ReadDir(fs.GetRootFileHandle(), 0, 0)
+
 	err = fs.Umount(0)
 	assert.NoError(t, err)
 
