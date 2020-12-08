@@ -16,13 +16,9 @@ import "C"
 
 import (
 	//	"syscall"
+	"fmt"
 	"unsafe"
 )
-
-//export goCommonReadDirCallback
-func goCommonReadDirCallback(name *C.char) bool {
-	return true
-}
 
 // typedef void* librgw_t;
 type RGW struct {
@@ -166,10 +162,25 @@ func (fs *FS) StatFS(pFH *FileHandle, flags uint32) (*StatVFS, error) {
 // typedef bool (*rgw_readdir_cb)(const char *name, void *arg, uint64_t offset,
 //                                struct stat *st, uint32_t mask,
 //                                uint32_t flags);
-type ReadDirCallback struct {
+
+//export goCommonReadDirCallback
+func goCommonReadDirCallback(name *C.char) bool {
+	fmt.Println(C.GoString(name))
+	return true
 }
 
 // int rgw_readdir(struct rgw_fs *rgw_fs,
 //                 struct rgw_file_handle *parent_fh, uint64_t *offset,
 //                 rgw_readdir_cb rcb, void *cb_arg, bool *eof,
 //                 uint32_t flags)
+func (fs *FS) ReadDir(parentHdl *FileHandle, offset uint64, flags uint32) (uint64, bool, error) {
+	coffset := C.uint64_t(offset)
+	var eof C.bool = false
+	if ret := C.rgw_readdir(fs.rgwFS, parentHdl.handle, &coffset, C.rgw_readdir_cb(C.common_readdir_cb),
+		unsafe.Pointer(nil), &eof, C.uint(flags)); ret != 0 {
+		return 0, false, getError(ret)
+	} else {
+		next := uint64(coffset)
+		return next, bool(eof), getError(ret)
+	}
+}
