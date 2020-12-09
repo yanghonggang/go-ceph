@@ -15,9 +15,10 @@ extern bool common_readdir_cb(const char *name, void *arg, uint64_t offset,
 import "C"
 
 import (
-	//	"syscall"
-	"fmt"
+	"syscall"
 	"unsafe"
+
+	gopointer "github.com/mattn/go-pointer"
 )
 
 // typedef void* librgw_t;
@@ -163,21 +164,51 @@ func (fs *FS) StatFS(pFH *FileHandle, flags uint32) (*StatVFS, error) {
 //                                struct stat *st, uint32_t mask,
 //                                uint32_t flags);
 
+type ReadDirCallback interface {
+	Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool
+}
+
 //export goCommonReadDirCallback
-func goCommonReadDirCallback(name *C.char) bool {
-	fmt.Println(C.GoString(name))
-	return true
+func goCommonReadDirCallback(name *C.char, arg unsafe.Pointer, offset C.uint64_t,
+	stat *C.struct_stat, mask, flags C.uint32_t) bool {
+
+	cb := gopointer.Restore(arg).(ReadDirCallback)
+
+	var st syscall.Stat_t
+	if stat != nil {
+		st = syscall.Stat_t{
+			Dev:     uint64(stat.st_dev),
+			Ino:     uint64(stat.st_ino),
+			Nlink:   uint64(stat.st_nlink),
+			Mode:    uint32(stat.st_mode),
+			Uid:     uint32(stat.st_uid),
+			Gid:     uint32(stat.st_gid),
+			Rdev:    uint64(stat.st_rdev),
+			Size:    int64(stat.st_size),
+			Blksize: int64(stat.st_blksize),
+			Blocks:  int64(stat.st_blocks),
+			// FIXME
+			//	st.Atim = st.st_atime
+			//	st.Mtim = st.st_mtime
+			//	st.Ctim = st.st_ctime
+		}
+	}
+	return cb.Callback(C.GoString(name), &st, uint32(mask), uint32(flags))
 }
 
 // int rgw_readdir(struct rgw_fs *rgw_fs,
 //                 struct rgw_file_handle *parent_fh, uint64_t *offset,
 //                 rgw_readdir_cb rcb, void *cb_arg, bool *eof,
 //                 uint32_t flags)
-func (fs *FS) ReadDir(parentHdl *FileHandle, offset uint64, flags uint32) (uint64, bool, error) {
+func (fs *FS) ReadDir(parentHdl *FileHandle, cb ReadDirCallback, offset uint64, flags uint32) (uint64, bool, error) {
 	coffset := C.uint64_t(offset)
 	var eof C.bool = false
+
+	cbArg := gopointer.Save(cb)
+	defer gopointer.Unref(cbArg)
+
 	if ret := C.rgw_readdir(fs.rgwFS, parentHdl.handle, &coffset, C.rgw_readdir_cb(C.common_readdir_cb),
-		unsafe.Pointer(nil), &eof, C.uint(flags)); ret != 0 {
+		unsafe.Pointer(cbArg), &eof, C.uint(flags)); ret != 0 {
 		return 0, false, getError(ret)
 	} else {
 		next := uint64(coffset)

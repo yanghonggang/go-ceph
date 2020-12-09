@@ -2,6 +2,7 @@ package rgw
 
 import (
 	"fmt"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,6 +17,14 @@ func TestCreateRGW(t *testing.T) {
 }
 */
 
+type ReadDirCallbackDump struct {
+}
+
+func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool {
+	fmt.Printf("name: %v, stat: %v\n", name, *st)
+	return true
+}
+
 func TestMountUmount(t *testing.T) {
 	rgw, err := CreateRGW([]string{"-c /etc/ceph/ceph.conf", "--name client.rgw.bjlt03-e57"})
 	assert.NoError(t, err)
@@ -29,8 +38,8 @@ func TestMountUmount(t *testing.T) {
 	assert.NotNil(t, statVFS)
 	assert.NoError(t, err)
 	fmt.Println(">>>> statVFS.Blocks ", statVFS.Blocks)
-
-	fs.ReadDir(fs.GetRootFileHandle(), 0, 0)
+	cb := &ReadDirCallbackDump{}
+	fs.ReadDir(fs.GetRootFileHandle(), cb, 0, 0)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
