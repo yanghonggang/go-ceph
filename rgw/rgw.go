@@ -215,3 +215,10 @@ func (fs *FS) ReadDir(parentHdl *FileHandle, cb ReadDirCallback, offset uint64, 
 		return next, bool(eof), getError(ret)
 	}
 }
+
+// void rgwfile_version(int *major, int *minor, int *extra)
+func FileVersion() (int, int, int) {
+	var major, minor, extra C.int
+	C.rgwfile_version(&major, &minor, &extra)
+	return int(major), int(minor), int(extra)
+}
