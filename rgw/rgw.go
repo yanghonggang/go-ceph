@@ -212,7 +212,7 @@ func (fs *FS) ReadDir(parentHdl *FileHandle, cb ReadDirCallback, offset uint64, 
 		return 0, false, getError(ret)
 	} else {
 		next := uint64(coffset)
-		return next, bool(eof), getError(ret)
+		return next, bool(eof), nil
 	}
 }
 
@@ -221,4 +221,39 @@ func FileVersion() (int, int, int) {
 	var major, minor, extra C.int
 	C.rgwfile_version(&major, &minor, &extra)
 	return int(major), int(minor), int(extra)
+}
+
+//    int rgw_lookup(rgw_fs *fs,
+//                   rgw_file_handle *parent_fh, const char *path,
+//                   rgw_file_handle **fh, stat* st, uint32_t st_mask,
+//                   uint32_t flags)
+func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask, flags uint32) (*FileHandle, *syscall.Stat_t, error) {
+	var fh *FileHandle = &FileHandle{}
+	var stat C.struct_stat
+
+	cpath := C.CString(path)
+	defer C.free(unsafe.Pointer(cpath))
+
+	if ret := C.rgw_lookup(fs.rgwFS, parentHdl.handle, cpath, &fh.handle, &stat,
+		C.uint32_t(stMask), C.uint32_t(flags)); ret == 0 {
+		st := syscall.Stat_t{
+			Dev:     uint64(stat.st_dev),
+			Ino:     uint64(stat.st_ino),
+			Nlink:   uint64(stat.st_nlink),
+			Mode:    uint32(stat.st_mode),
+			Uid:     uint32(stat.st_uid),
+			Gid:     uint32(stat.st_gid),
+			Rdev:    uint64(stat.st_rdev),
+			Size:    int64(stat.st_size),
+			Blksize: int64(stat.st_blksize),
+			Blocks:  int64(stat.st_blocks),
+			// FIXME
+			//	st.Atim = st.st_atime
+			//	st.Mtim = st.st_mtime
+			//	st.Ctim = st.st_ctime
+		}
+		return fh, &st, nil
+	} else {
+		return nil, nil, getError(ret)
+	}
 }

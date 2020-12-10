@@ -44,6 +44,11 @@ func TestMountUmount(t *testing.T) {
 	cb := &ReadDirCallbackDump{}
 	fs.ReadDir(fs.GetRootFileHandle(), cb, 0, 0)
 
+	fh, st, err := fs.Lookup(fs.GetRootFileHandle(), "yhgtest", 0, 0)
+	assert.NotNil(t, fh)
+	assert.NoError(t, err)
+	fmt.Printf("st: %v\n", st)
+
 	err = fs.Umount(0)
 	assert.NoError(t, err)
 
