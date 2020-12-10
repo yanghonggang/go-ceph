@@ -231,11 +231,48 @@ func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask, flags uint32) (
 	var fh *FileHandle = &FileHandle{}
 	var stat C.struct_stat
 
-	cpath := C.CString(path)
-	defer C.free(unsafe.Pointer(cpath))
+	cPath := C.CString(path)
+	defer C.free(unsafe.Pointer(cPath))
 
-	if ret := C.rgw_lookup(fs.rgwFS, parentHdl.handle, cpath, &fh.handle, &stat,
+	if ret := C.rgw_lookup(fs.rgwFS, parentHdl.handle, cPath, &fh.handle, &stat,
 		C.uint32_t(stMask), C.uint32_t(flags)); ret == 0 {
+		st := syscall.Stat_t{
+			Dev:     uint64(stat.st_dev),
+			Ino:     uint64(stat.st_ino),
+			Nlink:   uint64(stat.st_nlink),
+			Mode:    uint32(stat.st_mode),
+			Uid:     uint32(stat.st_uid),
+			Gid:     uint32(stat.st_gid),
+			Rdev:    uint64(stat.st_rdev),
+			Size:    int64(stat.st_size),
+			Blksize: int64(stat.st_blksize),
+			Blocks:  int64(stat.st_blocks),
+			// FIXME
+			//	st.Atim = st.st_atime
+			//	st.Mtim = st.st_mtime
+			//	st.Ctim = st.st_ctime
+		}
+		return fh, &st, nil
+	} else {
+		return nil, nil, getError(ret)
+	}
+}
+
+//    int rgw_create(rgw_fs *fs, rgw_file_handle *parent_fh,
+//                   const char *name, stat *st, uint32_t mask,
+//                   rgw_file_handle **fh, uint32_t posix_flags,
+//                   uint32_t flags)
+func (fs *FS) Create(parentHdl *FileHandle, name string, mask, posixFlags, flags uint32) (
+	*FileHandle, *syscall.Stat_t, error) {
+
+	var fh *FileHandle = &FileHandle{}
+	var stat C.struct_stat
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	if ret := C.rgw_create(fs.rgwFS, parentHdl.handle, cName, &stat, C.uint32_t(mask), &fh.handle,
+		C.uint32_t(posixFlags), C.uint32_t(flags)); ret == 0 {
 		st := syscall.Stat_t{
 			Dev:     uint64(stat.st_dev),
 			Ino:     uint64(stat.st_ino),

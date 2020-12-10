@@ -2,8 +2,10 @@ package rgw
 
 import (
 	"fmt"
+	"math/rand"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -41,6 +43,7 @@ func TestMountUmount(t *testing.T) {
 	assert.NotNil(t, statVFS)
 	assert.NoError(t, err)
 	fmt.Println(">>>> statVFS.Blocks ", statVFS.Blocks)
+
 	cb := &ReadDirCallbackDump{}
 	fs.ReadDir(fs.GetRootFileHandle(), cb, 0, 0)
 
@@ -48,6 +51,15 @@ func TestMountUmount(t *testing.T) {
 	assert.NotNil(t, fh)
 	assert.NoError(t, err)
 	fmt.Printf("st: %v\n", st)
+	fs.ReadDir(fh, cb, 0, 0)
+
+	rand.Seed(time.Now().UnixNano())
+	objName := fmt.Sprintf("hehe-%v-%v", rand.Int63(), rand.Int63())
+	fhObj, stObj, err := fs.Create(fh, objName, 0, 0, 0)
+	assert.NotNil(t, fhObj)
+	assert.NoError(t, err)
+	fmt.Printf("stHehe: %v\n", stObj)
+	fs.ReadDir(fh, cb, 0, 0)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
