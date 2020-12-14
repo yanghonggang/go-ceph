@@ -373,3 +373,13 @@ func (fs *FS) Close(fh *FileHandle, flags uint32) error {
 		return getError(ret)
 	}
 }
+
+//    int rgw_fsync(rgw_fs *fs, rgw_file_handle *fh,
+//                  uint32_t flags)
+func (fs *FS) Fsync(fh *FileHandle, flags uint32) error {
+	if ret := C.rgw_fsync(fs.rgwFS, fh.handle, C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
