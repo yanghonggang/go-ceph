@@ -59,15 +59,25 @@ func TestMountUmount(t *testing.T) {
 	fhDir, stDir, err := fs.Mkdir(fh, dirName, 0, 0)
 	assert.NotNil(t, fhDir)
 	assert.NoError(t, err)
-	fmt.Printf("stDir: %v\n", stDir)
+	fmt.Printf("stat of %v: %v\n", dirName, stDir)
 	fs.ReadDir(fh, cb, 0, 0)
 
 	objName := fmt.Sprintf("haha-%v-%v", rand.Int63(), rand.Int63())
 	fhObj, stObj, err := fs.Create(fhDir, objName, 0, 0, 0)
 	assert.NotNil(t, fhObj)
 	assert.NoError(t, err)
-	fmt.Printf("stObj: %v\n", stObj)
+	fmt.Printf("stat of %v: %v\n", objName, stObj)
 	fs.ReadDir(fhDir, cb, 0, 0)
+
+	err = fs.Open(fhObj, 0, 0)
+	assert.NoError(t, err)
+
+	buffer := []byte{'h', 'e', 'l', 'l', 'o'}
+	written, err := fs.Write(fhObj, buffer, 0, uint(len(buffer)), 0)
+	fmt.Printf("written %v, err %v\n", written, err)
+
+	err = fs.Close(fhObj, 0)
+	assert.NoError(t, err)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)

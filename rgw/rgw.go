@@ -332,3 +332,44 @@ func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask, flags uint32) (
 		return nil, nil, getError(ret)
 	}
 }
+
+//    int rgw_write(rgw_fs *fs,
+//                  rgw_file_handle *fh, uint64_t offset,
+//                  size_t length, size_t *bytes_written, void *buffer,
+//                  uint32_t flags)
+//
+func (fs *FS) Write(fh *FileHandle, buffer []byte, offset uint64, length uint,
+	flags uint32) (bytesWritten uint, err error) {
+	var written C.size_t
+
+	/// TODO: handle zero length buffer
+	if ret := C.rgw_write(fs.rgwFS, fh.handle, C.uint64_t(offset),
+		C.size_t(length), &written, unsafe.Pointer(&buffer[0]),
+		C.uint32_t(flags)); ret == 0 {
+		return uint(written), nil
+	} else {
+		return uint(written), getError(ret)
+	}
+}
+
+// TODO: RGW_OPEN_FLAG_NONE
+// int rgw_open(struct rgw_fs *rgw_fs,
+//             struct rgw_file_handle *fh, uint32_t posix_flags, uint32_t flags)
+func (fs *FS) Open(fh *FileHandle, posixFlags, flags uint32) error {
+	if ret := C.rgw_open(fs.rgwFS, fh.handle, C.uint32_t(posixFlags),
+		C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
+
+//    int rgw_close(rgw_fs *fs, rgw_file_handle *fh,
+//                  uint32_t flags)
+func (fs *FS) Close(fh *FileHandle, flags uint32) error {
+	if ret := C.rgw_close(fs.rgwFS, fh.handle, C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
