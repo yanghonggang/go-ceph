@@ -28,9 +28,6 @@ func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, f
 }
 
 func TestMountUmount(t *testing.T) {
-	major, minor, extra := FileVersion()
-	fmt.Printf("major: %v, minor: %v, extra: %v\n", major, minor, extra)
-
 	rgw, err := CreateRGW([]string{"-c /etc/ceph/ceph.conf", "--name client.rgw.bjlt03-e57"})
 	assert.NoError(t, err)
 	assert.NotNil(t, rgw)
@@ -38,6 +35,9 @@ func TestMountUmount(t *testing.T) {
 	fs := FS{}
 	err = fs.Mount(rgw, "test", "ak", "sk", 0)
 	assert.NoError(t, err)
+
+	major, minor, extra := fs.Version()
+	fmt.Printf("major: %v, minor: %v, extra: %v\n", major, minor, extra)
 
 	statVFS, err := fs.StatFS(fs.GetRootFileHandle(), 0)
 	assert.NotNil(t, statVFS)
