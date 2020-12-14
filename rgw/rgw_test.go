@@ -54,12 +54,20 @@ func TestMountUmount(t *testing.T) {
 	fs.ReadDir(fh, cb, 0, 0)
 
 	rand.Seed(time.Now().UnixNano())
-	objName := fmt.Sprintf("hehe-%v-%v", rand.Int63(), rand.Int63())
-	fhObj, stObj, err := fs.Create(fh, objName, 0, 0, 0)
+
+	dirName := fmt.Sprintf("mydir-%v-%v", rand.Int63(), rand.Int63())
+	fhDir, stDir, err := fs.Mkdir(fh, dirName, 0, 0)
+	assert.NotNil(t, fhDir)
+	assert.NoError(t, err)
+	fmt.Printf("stDir: %v\n", stDir)
+	fs.ReadDir(fh, cb, 0, 0)
+
+	objName := fmt.Sprintf("haha-%v-%v", rand.Int63(), rand.Int63())
+	fhObj, stObj, err := fs.Create(fhDir, objName, 0, 0, 0)
 	assert.NotNil(t, fhObj)
 	assert.NoError(t, err)
-	fmt.Printf("stHehe: %v\n", stObj)
-	fs.ReadDir(fh, cb, 0, 0)
+	fmt.Printf("stObj: %v\n", stObj)
+	fs.ReadDir(fhDir, cb, 0, 0)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
