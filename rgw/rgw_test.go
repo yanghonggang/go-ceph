@@ -73,8 +73,12 @@ func TestMountUmount(t *testing.T) {
 	assert.NoError(t, err)
 
 	buffer := []byte{'h', 'e', 'l', 'l', 'o'}
-	written, err := fs.Write(fhObj, buffer, 0, uint(len(buffer)), 0)
+	written, err := fs.Write(fhObj, buffer, 0, uint64(len(buffer)), 0)
 	fmt.Printf("written %v, err %v\n", written, err)
+
+	// Commit(fh *FileHandle, offset, length uint64, flags uint32) error
+	err = fs.Commit(fhObj, 0, uint64(len(buffer)), 0)
+	assert.NoError(t, err)
 
 	err = fs.Close(fhObj, 0)
 	assert.NoError(t, err)

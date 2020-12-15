@@ -338,7 +338,7 @@ func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask, flags uint32) (
 //                  size_t length, size_t *bytes_written, void *buffer,
 //                  uint32_t flags)
 //
-func (fs *FS) Write(fh *FileHandle, buffer []byte, offset uint64, length uint,
+func (fs *FS) Write(fh *FileHandle, buffer []byte, offset uint64, length uint64,
 	flags uint32) (bytesWritten uint, err error) {
 	var written C.size_t
 
@@ -374,10 +374,22 @@ func (fs *FS) Close(fh *FileHandle, flags uint32) error {
 	}
 }
 
+// Actually, do nothing
 //    int rgw_fsync(rgw_fs *fs, rgw_file_handle *fh,
 //                  uint32_t flags)
 func (fs *FS) Fsync(fh *FileHandle, flags uint32) error {
 	if ret := C.rgw_fsync(fs.rgwFS, fh.handle, C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
+
+// int rgw_commit(struct rgw_fs *rgw_fs, struct rgw_file_handle *fh,
+//               uint64_t offset, uint64_t length, uint32_t flags)
+func (fs *FS) Commit(fh *FileHandle, offset, length uint64, flags uint32) error {
+	if ret := C.rgw_commit(fs.rgwFS, fh.handle, C.uint64_t(offset),
+		C.uint64_t(length), C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
 		return getError(ret)
