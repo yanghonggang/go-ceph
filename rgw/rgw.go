@@ -352,6 +352,23 @@ func (fs *FS) Write(fh *FileHandle, buffer []byte, offset uint64, length uint64,
 	}
 }
 
+//    int rgw_read(rgw_fs *fs,
+//                 rgw_file_handle *fh, uint64_t offset,
+//                 size_t length, size_t *bytes_read, void *buffer,
+//                 uint32_t flags)
+func (fs *FS) Read(fh *FileHandle, offset, length uint64, buffer []byte,
+	flags uint32) (bytes_read uint64, err error) {
+	var cbytes_read C.size_t
+	bufptr := unsafe.Pointer(&buffer[0])
+	if ret := C.rgw_read(fs.rgwFS, fh.handle, C.uint64_t(offset),
+		C.size_t(length), &cbytes_read, bufptr,
+		C.uint32_t(flags)); ret == 0 {
+		return uint64(cbytes_read), nil
+	} else {
+		return 0, getError(ret)
+	}
+}
+
 // TODO: RGW_OPEN_FLAG_NONE
 // int rgw_open(struct rgw_fs *rgw_fs,
 //             struct rgw_file_handle *fh, uint32_t posix_flags, uint32_t flags)

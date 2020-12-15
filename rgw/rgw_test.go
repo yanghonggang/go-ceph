@@ -76,12 +76,23 @@ func TestMountUmount(t *testing.T) {
 	written, err := fs.Write(fhObj, buffer, 0, uint64(len(buffer)), 0)
 	fmt.Printf("written %v, err %v\n", written, err)
 
-	// Commit(fh *FileHandle, offset, length uint64, flags uint32) error
+	// FIXME: it seems that buffer is not committed
 	err = fs.Commit(fhObj, 0, uint64(len(buffer)), 0)
 	assert.NoError(t, err)
 
+	buffer2 := make([]byte, len(buffer))
+	bytes, err := fs.Read(fhObj, 0, uint64(len(buffer)), buffer2, 0)
+	assert.NotNil(t, bytes)
+	assert.NoError(t, err)
+	fmt.Printf("read back: %v, err %v, bytes %v\n", buffer2, err, bytes)
+
 	err = fs.Close(fhObj, 0)
 	assert.NoError(t, err)
+
+	bytes, err = fs.Read(fhObj, 0, uint64(len(buffer)), buffer2, 0)
+	assert.NotNil(t, bytes)
+	assert.NoError(t, err)
+	fmt.Printf("read back: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
