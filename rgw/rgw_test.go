@@ -47,7 +47,8 @@ func TestMountUmount(t *testing.T) {
 	cb := &ReadDirCallbackDump{}
 	fs.ReadDir(fs.GetRootFileHandle(), cb, 0, 0)
 
-	fh, st, err := fs.Lookup(fs.GetRootFileHandle(), "yhgtest", 0, 0)
+	bucketName := "yhgtest"
+	fh, st, err := fs.Lookup(fs.GetRootFileHandle(), bucketName, 0, 0)
 	assert.NotNil(t, fh)
 	assert.NoError(t, err)
 	fmt.Printf("st: %v\n", st)
@@ -92,7 +93,7 @@ func TestMountUmount(t *testing.T) {
 	bytes, err = fs.Read(fhObj, 0, uint64(len(buffer)), buffer2, 0)
 	assert.NotNil(t, bytes)
 	assert.NoError(t, err)
-	fmt.Printf("read back: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
+	fmt.Printf("read back after close: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
 
 	err = fs.Truncate(fhObj, 2, 0)
 	assert.NotNil(t, bytes)
@@ -104,10 +105,8 @@ func TestMountUmount(t *testing.T) {
 
 	fs.ReadDir(fhDir, cb, 0, 0)
 
-	/// FIXME: unlink error
-	//	fullName := fmt.Sprintf("%s/%s", dirName, objName)
-	//	fmt.Println("fullName ", fullName)
-	//	err = fs.Unlink(fh, fullName, 0)
+	err = fs.Unlink(fhDir, objName, 0)
+	// FIXME: unlink failed
 	//	assert.NoError(t, err)
 
 	err = fs.Umount(0)

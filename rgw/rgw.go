@@ -433,11 +433,11 @@ func (fs *FS) Truncate(fh *FileHandle, size uint64, flags uint32) error {
 //    int rgw_unlink(rgw_fs *fs,
 //                   rgw_file_handle *parent_fh, const char* path,
 //                   uint32_t flags)
-func (fs *FS) Unlink(fh *FileHandle, path string, flags uint32) error {
+func (fs *FS) Unlink(parentHdl *FileHandle, path string, flags uint32) error {
 	cpath := C.CString(path)
 	C.free(unsafe.Pointer(cpath))
 
-	if ret := C.rgw_unlink(fs.rgwFS, fh.handle, cpath, C.uint32_t(flags)); ret == 0 {
+	if ret := C.rgw_unlink(fs.rgwFS, parentHdl.handle, cpath, C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
 		return getError(ret)
