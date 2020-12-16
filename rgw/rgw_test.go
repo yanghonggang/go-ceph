@@ -94,6 +94,22 @@ func TestMountUmount(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Printf("read back: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
 
+	err = fs.Truncate(fhObj, 2, 0)
+	assert.NotNil(t, bytes)
+
+	bytes, err = fs.Read(fhObj, 0, uint64(len(buffer)), buffer2, 0)
+	assert.NotNil(t, bytes)
+	assert.NoError(t, err)
+	fmt.Printf("read back after truncate to 2 bytes: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
+
+	fs.ReadDir(fhDir, cb, 0, 0)
+
+	/// FIXME: unlink error
+	//	fullName := fmt.Sprintf("%s/%s", dirName, objName)
+	//	fmt.Println("fullName ", fullName)
+	//	err = fs.Unlink(fh, fullName, 0)
+	//	assert.NoError(t, err)
+
 	err = fs.Umount(0)
 	assert.NoError(t, err)
 

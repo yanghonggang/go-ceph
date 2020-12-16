@@ -61,8 +61,15 @@ type FS struct {
 // int rgw_mount(librgw_t rgw, const char *uid, const char *key,
 //               const char *secret, rgw_fs **fs, uint32_t flags)
 func (fs *FS) Mount(rgw *RGW, uid, key, secret string, flags uint32) error {
-	ret := C.rgw_mount(*rgw.libRGW, C.CString(uid), C.CString(key),
-		C.CString(secret), &fs.rgwFS, C.uint(flags))
+	cuid := C.CString(uid)
+	ckey := C.CString(key)
+	csecret := C.CString(secret)
+
+	defer C.free(unsafe.Pointer(cuid))
+	defer C.free(unsafe.Pointer(ckey))
+	defer C.free(unsafe.Pointer(csecret))
+	ret := C.rgw_mount(*rgw.libRGW, cuid, ckey, csecret,
+		&fs.rgwFS, C.uint(flags))
 	if ret != 0 {
 		return getError(ret)
 	}
@@ -407,6 +414,30 @@ func (fs *FS) Fsync(fh *FileHandle, flags uint32) error {
 func (fs *FS) Commit(fh *FileHandle, offset, length uint64, flags uint32) error {
 	if ret := C.rgw_commit(fs.rgwFS, fh.handle, C.uint64_t(offset),
 		C.uint64_t(length), C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
+
+// Actually, do nothing
+// int rgw_truncate(rgw_fs *fs, rgw_file_handle *fh, uint64_t size, uint32_t flags)
+func (fs *FS) Truncate(fh *FileHandle, size uint64, flags uint32) error {
+	if ret := C.rgw_truncate(fs.rgwFS, fh.handle, C.uint64_t(size), C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
+
+//    int rgw_unlink(rgw_fs *fs,
+//                   rgw_file_handle *parent_fh, const char* path,
+//                   uint32_t flags)
+func (fs *FS) Unlink(fh *FileHandle, path string, flags uint32) error {
+	cpath := C.CString(path)
+	C.free(unsafe.Pointer(cpath))
+
+	if ret := C.rgw_unlink(fs.rgwFS, fh.handle, cpath, C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
 		return getError(ret)
