@@ -435,9 +435,28 @@ func (fs *FS) Truncate(fh *FileHandle, size uint64, flags uint32) error {
 //                   uint32_t flags)
 func (fs *FS) Unlink(parentHdl *FileHandle, path string, flags uint32) error {
 	cpath := C.CString(path)
-	C.free(unsafe.Pointer(cpath))
+	defer C.free(unsafe.Pointer(cpath))
 
 	if ret := C.rgw_unlink(fs.rgwFS, parentHdl.handle, cpath, C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
+	}
+}
+
+//    int rgw_rename(rgw_fs *fs,
+//                   rgw_file_handle *olddir, const char* old_name,
+//                   rgw_file_handle *newdir, const char* new_name,
+//                   uint32_t flags)
+func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
+	newDirHdl *FileHandle, newName string, flags uint32) error {
+	cOldName := C.CString(oldName)
+	defer C.free(unsafe.Pointer(cOldName))
+	cNewName := C.CString(newName)
+	defer C.free(unsafe.Pointer(cNewName))
+
+	if ret := C.rgw_rename(fs.rgwFS, oldDirHdl.handle, cOldName,
+		newDirHdl.handle, cNewName, C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
 		return getError(ret)

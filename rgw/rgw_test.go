@@ -56,14 +56,14 @@ func TestMountUmount(t *testing.T) {
 
 	rand.Seed(time.Now().UnixNano())
 
-	dirName := fmt.Sprintf("mydir-%v-%v", rand.Int63(), rand.Int63())
+	dirName := fmt.Sprintf("mydirP%vP%v", rand.Int63(), rand.Int63())
 	fhDir, stDir, err := fs.Mkdir(fh, dirName, 0, 0)
 	assert.NotNil(t, fhDir)
 	assert.NoError(t, err)
 	fmt.Printf("stat of %v: %v\n", dirName, stDir)
 	fs.ReadDir(fh, cb, 0, 0)
 
-	objName := fmt.Sprintf("haha-%v-%v", rand.Int63(), rand.Int63())
+	objName := fmt.Sprintf("hahaP%vP%v", rand.Int63(), rand.Int63())
 	fhObj, stObj, err := fs.Create(fhDir, objName, 0, 0, 0)
 	assert.NotNil(t, fhObj)
 	assert.NoError(t, err)
@@ -105,9 +105,18 @@ func TestMountUmount(t *testing.T) {
 
 	fs.ReadDir(fhDir, cb, 0, 0)
 
+	fhObj2, _, err := fs.Create(fh, "obj111", 0, 0, 0)
+	assert.NotNil(t, fhObj2)
+	assert.NoError(t, err)
+
+	err = fs.Close(fhObj2, 0)
+	assert.NoError(t, err)
+
 	err = fs.Unlink(fhDir, objName, 0)
-	// FIXME: unlink failed
-	//	assert.NoError(t, err)
+	assert.NoError(t, err)
+
+	err = fs.Rename(fh, "obj111", fhDir, "obj222", 0)
+	assert.NoError(t, err)
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
