@@ -1,0 +1,5 @@
+export GO_CEPH_TEST_CEPH_CONF="/etc/ceph/ceph.conf"
+export GO_CEPH_TEST_CLIENT_NAME="client.rgw.bjlt03-e57"
+export GO_CEPH_TEST_S3_USER="test"
+export GO_CEPH_TEST_S3_AK="ak"
+export GO_CEPH_TEST_S3_SK="sk"

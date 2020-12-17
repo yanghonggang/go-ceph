@@ -3,6 +3,9 @@ package rgw
 // example:
 // $ export GO_CEPH_TEST_CEPH_CONF="/etc/ceph/ceph.conf"
 // $ export GO_CEPH_TEST_CLIENT_NAME="client.rgw.bjlt03-e57"
+// $ export GO_CEPH_TEST_S3_USER="test"
+// $ export GO_CEPH_TEST_S3_AK="ak"
+// $ export GO_CEPH_TEST_S3_SK="sk"
 // $ go test -v
 import (
 	"fmt"
@@ -17,6 +20,12 @@ import (
 
 var (
 	rgw *RGW = nil
+
+	cephConf   string = os.Getenv("GO_CEPH_TEST_CEPH_CONF")
+	clientName string = os.Getenv("GO_CEPH_TEST_CLIENT_NAME")
+	s3User     string = os.Getenv("GO_CEPH_TEST_S3_USER")
+	ak         string = os.Getenv("GO_CEPH_TEST_S3_AK")
+	sk         string = os.Getenv("GO_CEPH_TEST_S3_SK")
 )
 
 type ReadDirCallbackDump struct {
@@ -28,9 +37,6 @@ func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, f
 }
 
 func TestCreateRGW(t *testing.T) {
-	cephConf := os.Getenv("GO_CEPH_TEST_CEPH_CONF")
-	clientName := os.Getenv("GO_CEPH_TEST_CLIENT_NAME")
-
 	confStr := "-c " + cephConf
 	nameStr := "--name " + clientName
 	rgwLocal, err := CreateRGW([]string{confStr, nameStr})
@@ -42,7 +48,7 @@ func TestCreateRGW(t *testing.T) {
 
 func TestMountUmount(t *testing.T) {
 	fs := FS{}
-	err := fs.Mount(rgw, "test", "ak", "sk", 0)
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
 	assert.NoError(t, err)
 
 	err = fs.Umount(0)
@@ -51,7 +57,7 @@ func TestMountUmount(t *testing.T) {
 
 func Test2(t *testing.T) {
 	fs := FS{}
-	err := fs.Mount(rgw, "test", "ak", "sk", 0)
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
 	assert.NoError(t, err)
 
 	major, minor, extra := fs.Version()
