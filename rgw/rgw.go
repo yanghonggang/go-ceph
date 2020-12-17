@@ -462,3 +462,31 @@ func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
 		return getError(ret)
 	}
 }
+
+//    int rgw_getattr(rgw_fs *fs,
+//                    rgw_file_handle *fh, stat *st,
+//                    uint32_t flags)
+func (fs *FS) Fstat(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
+	var stat C.struct_stat
+	if ret := C.rgw_getattr(fs.rgwFS, fh.handle, &stat, C.uint32_t(flags)); ret == 0 {
+		st := syscall.Stat_t{
+			Dev:     uint64(stat.st_dev),
+			Ino:     uint64(stat.st_ino),
+			Nlink:   uint64(stat.st_nlink),
+			Mode:    uint32(stat.st_mode),
+			Uid:     uint32(stat.st_uid),
+			Gid:     uint32(stat.st_gid),
+			Rdev:    uint64(stat.st_rdev),
+			Size:    int64(stat.st_size),
+			Blksize: int64(stat.st_blksize),
+			Blocks:  int64(stat.st_blocks),
+			// FIXME
+			//	st.Atim = st.st_atime
+			//	st.Mtim = st.st_mtime
+			//	st.Ctim = st.st_ctime
+		}
+		return &st, nil
+	} else {
+		return nil, getError(ret)
+	}
+}
