@@ -115,9 +115,13 @@ func TestMountUmount(t *testing.T) {
 	err = fs.Unlink(fhDir, objName, 0)
 	assert.NoError(t, err)
 
-	st2, err := fs.Fstat(fhObj2, 0)
+	st2 := &syscall.Stat_t{}
+	err = fs.SetAttr(fhObj2, st2, 0, 0)
 	assert.NoError(t, err)
-	fmt.Printf("object2 stat: %v", st2)
+
+	st3, err := fs.GetAttr(fhObj2, 0)
+	assert.NoError(t, err)
+	fmt.Printf("object2 stat: %v", st3)
 
 	err = fs.Rename(fh, "obj111", fhDir, "obj222", 0)
 	assert.NoError(t, err)

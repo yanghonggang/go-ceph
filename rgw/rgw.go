@@ -466,7 +466,7 @@ func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
 //    int rgw_getattr(rgw_fs *fs,
 //                    rgw_file_handle *fh, stat *st,
 //                    uint32_t flags)
-func (fs *FS) Fstat(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
+func (fs *FS) GetAttr(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
 	var stat C.struct_stat
 	if ret := C.rgw_getattr(fs.rgwFS, fh.handle, &stat, C.uint32_t(flags)); ret == 0 {
 		st := syscall.Stat_t{
@@ -488,5 +488,29 @@ func (fs *FS) Fstat(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
 		return &st, nil
 	} else {
 		return nil, getError(ret)
+	}
+}
+
+//    int rgw_setattr(rgw_fs *fs, rgw_file_handle *fh, stat *st,
+//                    uint32_t mask, uint32_t flags)
+func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask, flags uint32) error {
+	st := C.struct_stat{
+		st_dev:     C.uint64_t(stat.Dev),
+		st_ino:     C.uint64_t(stat.Ino),
+		st_nlink:   C.uint64_t(stat.Nlink),
+		st_mode:    C.uint32_t(stat.Mode),
+		st_uid:     C.uint32_t(stat.Uid),
+		st_gid:     C.uint32_t(stat.Gid),
+		st_rdev:    C.uint64_t(stat.Rdev),
+		st_size:    C.int64_t(stat.Size),
+		st_blksize: C.int64_t(stat.Blksize),
+		st_blocks:  C.int64_t(stat.Blocks),
+	}
+
+	if ret := C.rgw_setattr(fs.rgwFS, fh.handle, &st, C.uint32_t(mask),
+		C.uint32_t(flags)); ret == 0 {
+		return nil
+	} else {
+		return getError(ret)
 	}
 }
