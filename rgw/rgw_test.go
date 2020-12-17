@@ -1,8 +1,13 @@
 package rgw
 
+// example:
+// $ export GO_CEPH_TEST_CEPH_CONF="/etc/ceph/ceph.conf"
+// $ export GO_CEPH_TEST_CLIENT_NAME="client.rgw.bjlt03-e57"
+// $ go test -v
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"syscall"
 	"testing"
 	"time"
@@ -10,14 +15,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-/*
-func TestCreateRGW(t *testing.T) {
-	rgw, err := CreateRGW([]string{"-c /etc/ceph/ceph.conf", "--name client.rgw.bjlt03-e57"})
-	assert.NoError(t, err)
-	assert.NotNil(t, rgw)
-	ShutdownRGW(rgw)
-}
-*/
+var (
+	rgw *RGW = nil
+)
 
 type ReadDirCallbackDump struct {
 }
@@ -27,13 +27,31 @@ func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, f
 	return true
 }
 
-func TestMountUmount(t *testing.T) {
-	rgw, err := CreateRGW([]string{"-c /etc/ceph/ceph.conf", "--name client.rgw.bjlt03-e57"})
-	assert.NoError(t, err)
-	assert.NotNil(t, rgw)
+func TestCreateRGW(t *testing.T) {
+	cephConf := os.Getenv("GO_CEPH_TEST_CEPH_CONF")
+	clientName := os.Getenv("GO_CEPH_TEST_CLIENT_NAME")
 
+	confStr := "-c " + cephConf
+	nameStr := "--name " + clientName
+	rgwLocal, err := CreateRGW([]string{confStr, nameStr})
+	assert.NoError(t, err)
+	assert.NotNil(t, rgwLocal)
+
+	rgw = rgwLocal
+}
+
+func TestMountUmount(t *testing.T) {
 	fs := FS{}
-	err = fs.Mount(rgw, "test", "ak", "sk", 0)
+	err := fs.Mount(rgw, "test", "ak", "sk", 0)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+func Test2(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, "test", "ak", "sk", 0)
 	assert.NoError(t, err)
 
 	major, minor, extra := fs.Version()
@@ -128,6 +146,8 @@ func TestMountUmount(t *testing.T) {
 
 	err = fs.Umount(0)
 	assert.NoError(t, err)
+}
 
+func TestShutdownRGW(t *testing.T) {
 	ShutdownRGW(rgw)
 }
