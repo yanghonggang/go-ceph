@@ -28,12 +28,8 @@ var (
 	sk         string = os.Getenv("GO_CEPH_TEST_S3_SK")
 )
 
-type ReadDirCallbackDump struct {
-}
-
-func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool {
-	fmt.Printf("name: %v, stat: %v\n", name, *st)
-	return true
+func init() {
+	rand.Seed(time.Now().UnixNano())
 }
 
 func TestCreateRGW(t *testing.T) {
@@ -55,6 +51,82 @@ func TestMountUmount(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestVersion(t *testing.T) {
+	fs := FS{}
+	fs.Version()
+}
+
+func TestStatFS(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	statVFS, err := fs.StatFS(fs.GetRootFileHandle(), 0)
+	assert.NotNil(t, statVFS)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+type ReadDirCallbackDump struct{}
+
+func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool {
+	fmt.Printf("name: %v\n", name)
+	return true
+}
+
+func TestMkdir(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	bName := fmt.Sprintf("mybucket-%v", rand.Int63())
+	fhB, stB, err := fs.Mkdir(fs.GetRootFileHandle(), bName, 0, 0)
+	assert.NotNil(t, fhB)
+	assert.NotNil(t, stB)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+func TestReadDir(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	cb := &ReadDirCallbackDump{}
+	fs.ReadDir(fs.GetRootFileHandle(), cb, 0, 0)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+func TestCreateUnlink(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	bName := fmt.Sprintf("mybucket-%v", rand.Int63())
+	fhB, stB, err := fs.Mkdir(fs.GetRootFileHandle(), bName, 0, 0)
+	assert.NotNil(t, fhB)
+	assert.NotNil(t, stB)
+	assert.NoError(t, err)
+
+	objName := fmt.Sprintf("obj-%v", rand.Int63())
+	fhObj, _, err := fs.Create(fhB, objName, 0, 0, 0)
+	assert.NotNil(t, fhObj)
+	assert.NoError(t, err)
+
+	err = fs.Unlink(fhB, objName, 0)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+/*
 func Test2(t *testing.T) {
 	fs := FS{}
 	err := fs.Mount(rgw, s3User, ak, sk, 0)
@@ -76,23 +148,22 @@ func Test2(t *testing.T) {
 	assert.NotNil(t, fh)
 	assert.NoError(t, err)
 	fmt.Printf("st: %v\n", st)
-	fs.ReadDir(fh, cb, 0, 0)
+	//fs.ReadDir(fh, cb, 0, 0)
 
-	rand.Seed(time.Now().UnixNano())
 
 	dirName := fmt.Sprintf("mydirP%vP%v", rand.Int63(), rand.Int63())
 	fhDir, stDir, err := fs.Mkdir(fh, dirName, 0, 0)
 	assert.NotNil(t, fhDir)
 	assert.NoError(t, err)
 	fmt.Printf("stat of %v: %v\n", dirName, stDir)
-	fs.ReadDir(fh, cb, 0, 0)
+	//	fs.ReadDir(fh, cb, 0, 0)
 
 	objName := fmt.Sprintf("hahaP%vP%v", rand.Int63(), rand.Int63())
 	fhObj, stObj, err := fs.Create(fhDir, objName, 0, 0, 0)
 	assert.NotNil(t, fhObj)
 	assert.NoError(t, err)
 	fmt.Printf("stat of %v: %v\n", objName, stObj)
-	fs.ReadDir(fhDir, cb, 0, 0)
+	//fs.ReadDir(fhDir, cb, 0, 0)
 
 	err = fs.Open(fhObj, 0, 0)
 	assert.NoError(t, err)
@@ -127,7 +198,7 @@ func Test2(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Printf("read back after truncate to 2 bytes: %v, err %v, bytes %v\n", string(buffer2), err, bytes)
 
-	fs.ReadDir(fhDir, cb, 0, 0)
+	//fs.ReadDir(fhDir, cb, 0, 0)
 
 	fhObj2, _, err := fs.Create(fh, "obj111", 0, 0, 0)
 	assert.NotNil(t, fhObj2)
@@ -153,6 +224,7 @@ func Test2(t *testing.T) {
 	err = fs.Umount(0)
 	assert.NoError(t, err)
 }
+*/
 
 func TestShutdownRGW(t *testing.T) {
 	ShutdownRGW(rgw)
