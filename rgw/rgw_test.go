@@ -126,6 +126,103 @@ func TestCreateUnlink(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestOpenClose(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	bName := fmt.Sprintf("mybucket-%v", rand.Int63())
+	fhB, stB, err := fs.Mkdir(fs.GetRootFileHandle(), bName, 0, 0)
+	assert.NotNil(t, fhB)
+	assert.NotNil(t, stB)
+	assert.NoError(t, err)
+
+	objName := fmt.Sprintf("obj-%v", rand.Int63())
+	fhObj, _, err := fs.Create(fhB, objName, 0, 0, 0)
+	assert.NotNil(t, fhObj)
+	assert.NoError(t, err)
+
+	err = fs.Open(fhObj, 0, 0)
+	assert.NoError(t, err)
+
+	err = fs.Close(fhObj, 0)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+func TestReadWrite(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	bName := fmt.Sprintf("mybucket-%v", rand.Int63())
+	fhB, stB, err := fs.Mkdir(fs.GetRootFileHandle(), bName, 0, 0)
+	assert.NotNil(t, fhB)
+	assert.NotNil(t, stB)
+	assert.NoError(t, err)
+
+	objName := fmt.Sprintf("obj-%v", rand.Int63())
+	fhObj, _, err := fs.Create(fhB, objName, 0, 0, 0)
+	assert.NotNil(t, fhObj)
+	assert.NoError(t, err)
+
+	err = fs.Open(fhObj, 0, 0)
+	assert.NoError(t, err)
+
+	buffer := []byte{'h', 'e', 'l', 'l', 'o'}
+	written, err := fs.Write(fhObj, buffer, 0, uint64(len(buffer)), 0)
+	assert.EqualValues(t, written, uint64(len(buffer)))
+
+	err = fs.Close(fhObj, 0)
+	assert.NoError(t, err)
+
+	buffer2 := make([]byte, len(buffer))
+	bytes, err := fs.Read(fhObj, 0, uint64(len(buffer)), buffer2, 0)
+	assert.NotNil(t, bytes)
+	assert.NoError(t, err)
+	assert.Equal(t, string(buffer), string(buffer2))
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
+func TestRename(t *testing.T) {
+	fs := FS{}
+	err := fs.Mount(rgw, s3User, ak, sk, 0)
+	assert.NoError(t, err)
+
+	bName := fmt.Sprintf("mybucket-%v", rand.Int63())
+	fhB, stB, err := fs.Mkdir(fs.GetRootFileHandle(), bName, 0, 0)
+	assert.NotNil(t, fhB)
+	assert.NotNil(t, stB)
+	assert.NoError(t, err)
+
+	dirName := fmt.Sprintf("dir-%v", rand.Int63())
+	fhDir, stDir, err := fs.Mkdir(fhB, dirName, 0, 0)
+	assert.NotNil(t, fhDir)
+	assert.NotNil(t, stDir)
+	assert.NoError(t, err)
+
+	objName := fmt.Sprintf("obj-%v", rand.Int63())
+	fhObj, _, err := fs.Create(fhB, objName, 0, 0, 0)
+	assert.NotNil(t, fhObj)
+	assert.NoError(t, err)
+
+	objName2 := fmt.Sprintf("obj2-%v", rand.Int63())
+	err = fs.Rename(fhB, objName, fhDir, objName2, 0)
+	assert.NoError(t, err)
+
+	fhObj2, stObj2, err := fs.Lookup(fhDir, objName2, 0, 0)
+	assert.NotNil(t, fhObj2)
+	assert.NotNil(t, stObj2)
+	assert.NoError(t, err)
+
+	err = fs.Umount(0)
+	assert.NoError(t, err)
+}
+
 /*
 func Test2(t *testing.T) {
 	fs := FS{}
