@@ -463,6 +463,18 @@ func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
 	}
 }
 
+type AttrMask uint32
+
+const (
+	AttrMode  AttrMask = 1
+	AttrUid   AttrMask = 2
+	AttrGid   AttrMask = 4
+	AttrMtime AttrMask = 8
+	AttrAtime AttrMask = 16
+	AttrSize  AttrMask = 32
+	AttrCtime AttrMask = 64
+)
+
 //    int rgw_getattr(rgw_fs *fs,
 //                    rgw_file_handle *fh, stat *st,
 //                    uint32_t flags)
@@ -493,7 +505,7 @@ func (fs *FS) GetAttr(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
 
 //    int rgw_setattr(rgw_fs *fs, rgw_file_handle *fh, stat *st,
 //                    uint32_t mask, uint32_t flags)
-func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask, flags uint32) error {
+func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask AttrMask, flags uint32) error {
 	st := C.struct_stat{
 		st_dev:     C.uint64_t(stat.Dev),
 		st_ino:     C.uint64_t(stat.Ino),
