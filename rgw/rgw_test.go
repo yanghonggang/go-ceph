@@ -21,11 +21,11 @@ import (
 var (
 	rgw *RGW = nil
 
-	cephConf   string = os.Getenv("GO_CEPH_TEST_CEPH_CONF")
-	clientName string = os.Getenv("GO_CEPH_TEST_CLIENT_NAME")
-	s3User     string = os.Getenv("GO_CEPH_TEST_S3_USER")
-	ak         string = os.Getenv("GO_CEPH_TEST_S3_AK")
-	sk         string = os.Getenv("GO_CEPH_TEST_S3_SK")
+	cephConf   string = os.Getenv("CEPH_CONF")
+	clientName string = os.Getenv("RGW_TEST_CLIENT_NAME")
+	s3User     string = os.Getenv("RGW_TEST_S3_USER")
+	ak         string = os.Getenv("RGW_TEST_S3_AK")
+	sk         string = os.Getenv("RGW_TEST_S3_SK")
 )
 
 func init() {
