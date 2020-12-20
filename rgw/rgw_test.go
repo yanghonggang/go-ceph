@@ -71,7 +71,8 @@ func TestStatFS(t *testing.T) {
 
 type ReadDirCallbackDump struct{}
 
-func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool {
+func (cb *ReadDirCallbackDump) Callback(name string, st *syscall.Stat_t,
+	mask AttrMask, flags uint32) bool {
 	fmt.Printf("name: %v\n", name)
 	return true
 }

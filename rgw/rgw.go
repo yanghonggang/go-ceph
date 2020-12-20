@@ -58,9 +58,15 @@ type FS struct {
 	rgwFS *C.struct_rgw_fs
 }
 
+type MountFlag uint32
+
+const (
+	MountFlagNone MountFlag = 0
+)
+
 // int rgw_mount(librgw_t rgw, const char *uid, const char *key,
 //               const char *secret, rgw_fs **fs, uint32_t flags)
-func (fs *FS) Mount(rgw *RGW, uid, key, secret string, flags uint32) error {
+func (fs *FS) Mount(rgw *RGW, uid, key, secret string, flags MountFlag) error {
 	cuid := C.CString(uid)
 	ckey := C.CString(key)
 	csecret := C.CString(secret)
@@ -77,8 +83,14 @@ func (fs *FS) Mount(rgw *RGW, uid, key, secret string, flags uint32) error {
 	return nil
 }
 
+type UmountFlag uint32
+
+const (
+	UmountFlagNone UmountFlag = 0
+)
+
 // int rgw_umount(rgw_fs *fs, uint32_t flags)
-func (fs *FS) Umount(flags uint32) error {
+func (fs *FS) Umount(flags UmountFlag) error {
 	if ret := C.rgw_umount(fs.rgwFS, C.uint(flags)); ret == 0 {
 		return nil
 	} else {
@@ -125,9 +137,15 @@ func (fs *FS) GetRootFileHandle() *FileHandle {
 	}
 }
 
+type StatFSFlag uint32
+
+const (
+	StatFSFlagNone StatFSFlag = 0
+)
+
 //    int rgw_statfs(rgw_fs *fs, rgw_file_handle *parent_fh,
 //                   rgw_statvfs *vfs_st, uint32_t flags)
-func (fs *FS) StatFS(pFH *FileHandle, flags uint32) (*StatVFS, error) {
+func (fs *FS) StatFS(pFH *FileHandle, flags StatFSFlag) (*StatVFS, error) {
 	var statVFS C.struct_rgw_statvfs
 	if ret := C.rgw_statfs(fs.rgwFS, pFH.handle, &statVFS, C.uint(flags)); ret != 0 {
 		return nil, getError(ret)
@@ -149,30 +167,8 @@ func (fs *FS) StatFS(pFH *FileHandle, flags uint32) (*StatVFS, error) {
 	}
 }
 
-// syscall.Stat_t
-// type Stat_t struct {
-//     Dev       uint64
-//     Ino       uint64
-//     Nlink     uint64
-//     Mode      uint32
-//     Uid       uint32
-//     Gid       uint32
-//     X__pad0   int32
-//     Rdev      uint64
-//     Size      int64
-//     Blksize   int64
-//     Blocks    int64
-//     Atim      Timespec
-//     Mtim      Timespec
-//     Ctim      Timespec
-//     X__unused [3]int64
-// }
-// typedef bool (*rgw_readdir_cb)(const char *name, void *arg, uint64_t offset,
-//                                struct stat *st, uint32_t mask,
-//                                uint32_t flags);
-
 type ReadDirCallback interface {
-	Callback(name string, st *syscall.Stat_t, mask, flags uint32) bool
+	Callback(name string, st *syscall.Stat_t, mask AttrMask, flags uint32) bool
 }
 
 //export goCommonReadDirCallback
@@ -208,14 +204,21 @@ func goCommonReadDirCallback(name *C.char, arg unsafe.Pointer, offset C.uint64_t
 			},
 		}
 	}
-	return cb.Callback(C.GoString(name), &st, uint32(mask), uint32(flags))
+	return cb.Callback(C.GoString(name), &st, AttrMask(mask), uint32(flags))
 }
+
+type ReadDirFlag uint32
+
+const (
+	ReadDirFlagNone   ReadDirFlag = 0
+	ReadDirFlagDotDot ReadDirFlag = 1 // send dot names
+)
 
 // int rgw_readdir(struct rgw_fs *rgw_fs,
 //                 struct rgw_file_handle *parent_fh, uint64_t *offset,
 //                 rgw_readdir_cb rcb, void *cb_arg, bool *eof,
 //                 uint32_t flags)
-func (fs *FS) ReadDir(parentHdl *FileHandle, cb ReadDirCallback, offset uint64, flags uint32) (uint64, bool, error) {
+func (fs *FS) ReadDir(parentHdl *FileHandle, cb ReadDirCallback, offset uint64, flags ReadDirFlag) (uint64, bool, error) {
 	coffset := C.uint64_t(offset)
 	var eof C.bool = false
 
@@ -238,11 +241,35 @@ func (fs *FS) Version() (int, int, int) {
 	return int(major), int(minor), int(extra)
 }
 
+type AttrMask uint32
+
+const (
+	AttrMode  AttrMask = 1
+	AttrUid   AttrMask = 2
+	AttrGid   AttrMask = 4
+	AttrMtime AttrMask = 8
+	AttrAtime AttrMask = 16
+	AttrSize  AttrMask = 32
+	AttrCtime AttrMask = 64
+)
+
+type LookupFlag uint32
+
+const (
+	LookupFlagNone   LookupFlag = 0
+	LookupFlagCreate LookupFlag = 1
+	LookupFlagRCB    LookupFlag = 2 // readdir callback hint
+	LookupFlagDir    LookupFlag = 4
+	LookupFlagFile   LookupFlag = 8
+	LookupTypeFlags  LookupFlag = LookupFlagDir | LookupFlagFile
+)
+
 //    int rgw_lookup(rgw_fs *fs,
 //                   rgw_file_handle *parent_fh, const char *path,
 //                   rgw_file_handle **fh, stat* st, uint32_t st_mask,
 //                   uint32_t flags)
-func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask, flags uint32) (*FileHandle, *syscall.Stat_t, error) {
+func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask AttrMask,
+	flags LookupFlag) (*FileHandle, *syscall.Stat_t, error) {
 	var fh *FileHandle = &FileHandle{}
 	var stat C.struct_stat
 
@@ -281,11 +308,18 @@ func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask, flags uint32) (
 	}
 }
 
+type CreateFlag uint32
+
+const (
+	CreateFlagNone CreateFlag = 0
+)
+
 //    int rgw_create(rgw_fs *fs, rgw_file_handle *parent_fh,
 //                   const char *name, stat *st, uint32_t mask,
 //                   rgw_file_handle **fh, uint32_t posix_flags,
 //                   uint32_t flags)
-func (fs *FS) Create(parentHdl *FileHandle, name string, mask, posixFlags, flags uint32) (
+func (fs *FS) Create(parentHdl *FileHandle, name string, mask AttrMask,
+	posixFlags uint32, flags CreateFlag) (
 	*FileHandle, *syscall.Stat_t, error) {
 
 	var fh *FileHandle = &FileHandle{}
@@ -326,12 +360,18 @@ func (fs *FS) Create(parentHdl *FileHandle, name string, mask, posixFlags, flags
 	}
 }
 
+type MkdirFlag uint32
+
+const (
+	MkdirFlagNone MkdirFlag = 0
+)
+
 //    int rgw_mkdir(rgw_fs *fs,
 //                  rgw_file_handle *parent_fh,
 //                  const char *name, stat *st, uint32_t mask,
 //                  rgw_file_handle **fh, uint32_t flags)
 //
-func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask, flags uint32) (
+func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask AttrMask, flags MkdirFlag) (
 	*FileHandle, *syscall.Stat_t, error) {
 
 	var fh *FileHandle = &FileHandle{}
@@ -372,6 +412,12 @@ func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask, flags uint32) (
 	}
 }
 
+type WriteFlag uint32
+
+const (
+	WriteFlagNone WriteFlag = 0
+)
+
 //    int rgw_write(rgw_fs *fs,
 //                  rgw_file_handle *fh, uint64_t offset,
 //                  size_t length, size_t *bytes_written, void *buffer,
@@ -391,12 +437,18 @@ func (fs *FS) Write(fh *FileHandle, buffer []byte, offset uint64, length uint64,
 	}
 }
 
+type ReadFlag uint32
+
+const (
+	ReadFlagNone ReadFlag = 0
+)
+
 //    int rgw_read(rgw_fs *fs,
 //                 rgw_file_handle *fh, uint64_t offset,
 //                 size_t length, size_t *bytes_read, void *buffer,
 //                 uint32_t flags)
 func (fs *FS) Read(fh *FileHandle, offset, length uint64, buffer []byte,
-	flags uint32) (bytes_read uint64, err error) {
+	flags ReadFlag) (bytes_read uint64, err error) {
 	var cbytes_read C.size_t
 	bufptr := unsafe.Pointer(&buffer[0])
 	if ret := C.rgw_read(fs.rgwFS, fh.handle, C.uint64_t(offset),
@@ -408,10 +460,18 @@ func (fs *FS) Read(fh *FileHandle, offset, length uint64, buffer []byte,
 	}
 }
 
-// TODO: RGW_OPEN_FLAG_NONE
+type OpenFlag uint32
+
+const (
+	OpenFlagNone      OpenFlag = 0
+	OpenFlagCreate    OpenFlag = 1
+	OpenFlagV3        OpenFlag = 2 // ops have v3 semantics
+	OpenFlagStateless OpenFlag = 2 // alias it
+)
+
 // int rgw_open(struct rgw_fs *rgw_fs,
 //             struct rgw_file_handle *fh, uint32_t posix_flags, uint32_t flags)
-func (fs *FS) Open(fh *FileHandle, posixFlags, flags uint32) error {
+func (fs *FS) Open(fh *FileHandle, posixFlags uint32, flags OpenFlag) error {
 	if ret := C.rgw_open(fs.rgwFS, fh.handle, C.uint32_t(posixFlags),
 		C.uint32_t(flags)); ret == 0 {
 		return nil
@@ -420,9 +480,16 @@ func (fs *FS) Open(fh *FileHandle, posixFlags, flags uint32) error {
 	}
 }
 
+type CloseFlag uint32
+
+const (
+	CloseFlagNone CloseFlag = 0
+	CloseFlagRele CloseFlag = 1
+)
+
 //    int rgw_close(rgw_fs *fs, rgw_file_handle *fh,
 //                  uint32_t flags)
-func (fs *FS) Close(fh *FileHandle, flags uint32) error {
+func (fs *FS) Close(fh *FileHandle, flags CloseFlag) error {
 	if ret := C.rgw_close(fs.rgwFS, fh.handle, C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
@@ -430,10 +497,16 @@ func (fs *FS) Close(fh *FileHandle, flags uint32) error {
 	}
 }
 
+type FsyncFlag uint32
+
+const (
+	FsyncFlagNone FsyncFlag = 0
+)
+
 // Actually, do nothing
 //    int rgw_fsync(rgw_fs *fs, rgw_file_handle *fh,
 //                  uint32_t flags)
-func (fs *FS) Fsync(fh *FileHandle, flags uint32) error {
+func (fs *FS) Fsync(fh *FileHandle, flags FsyncFlag) error {
 	if ret := C.rgw_fsync(fs.rgwFS, fh.handle, C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
@@ -441,9 +514,15 @@ func (fs *FS) Fsync(fh *FileHandle, flags uint32) error {
 	}
 }
 
+type CommitFlag uint32
+
+const (
+	CommitFlagNone CommitFlag = 0
+)
+
 // int rgw_commit(struct rgw_fs *rgw_fs, struct rgw_file_handle *fh,
 //               uint64_t offset, uint64_t length, uint32_t flags)
-func (fs *FS) Commit(fh *FileHandle, offset, length uint64, flags uint32) error {
+func (fs *FS) Commit(fh *FileHandle, offset, length uint64, flags CommitFlag) error {
 	if ret := C.rgw_commit(fs.rgwFS, fh.handle, C.uint64_t(offset),
 		C.uint64_t(length), C.uint32_t(flags)); ret == 0 {
 		return nil
@@ -452,9 +531,15 @@ func (fs *FS) Commit(fh *FileHandle, offset, length uint64, flags uint32) error 
 	}
 }
 
+type TruncFlag uint32
+
+const (
+	TruncFlagNone TruncFlag = 0
+)
+
 // Actually, do nothing
 // int rgw_truncate(rgw_fs *fs, rgw_file_handle *fh, uint64_t size, uint32_t flags)
-func (fs *FS) Truncate(fh *FileHandle, size uint64, flags uint32) error {
+func (fs *FS) Truncate(fh *FileHandle, size uint64, flags TruncFlag) error {
 	if ret := C.rgw_truncate(fs.rgwFS, fh.handle, C.uint64_t(size), C.uint32_t(flags)); ret == 0 {
 		return nil
 	} else {
@@ -462,10 +547,16 @@ func (fs *FS) Truncate(fh *FileHandle, size uint64, flags uint32) error {
 	}
 }
 
+type UnlinkFlag uint32
+
+const (
+	UnlinkFlagNone UnlinkFlag = 0
+)
+
 //    int rgw_unlink(rgw_fs *fs,
 //                   rgw_file_handle *parent_fh, const char* path,
 //                   uint32_t flags)
-func (fs *FS) Unlink(parentHdl *FileHandle, path string, flags uint32) error {
+func (fs *FS) Unlink(parentHdl *FileHandle, path string, flags UnlinkFlag) error {
 	cpath := C.CString(path)
 	defer C.free(unsafe.Pointer(cpath))
 
@@ -476,12 +567,18 @@ func (fs *FS) Unlink(parentHdl *FileHandle, path string, flags uint32) error {
 	}
 }
 
+type RenameFlag uint32
+
+const (
+	RenameFlagNone RenameFlag = 0
+)
+
 //    int rgw_rename(rgw_fs *fs,
 //                   rgw_file_handle *olddir, const char* old_name,
 //                   rgw_file_handle *newdir, const char* new_name,
 //                   uint32_t flags)
 func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
-	newDirHdl *FileHandle, newName string, flags uint32) error {
+	newDirHdl *FileHandle, newName string, flags RenameFlag) error {
 	cOldName := C.CString(oldName)
 	defer C.free(unsafe.Pointer(cOldName))
 	cNewName := C.CString(newName)
@@ -495,22 +592,16 @@ func (fs *FS) Rename(oldDirHdl *FileHandle, oldName string,
 	}
 }
 
-type AttrMask uint32
+type GetAttrFlag uint32
 
 const (
-	AttrMode  AttrMask = 1
-	AttrUid   AttrMask = 2
-	AttrGid   AttrMask = 4
-	AttrMtime AttrMask = 8
-	AttrAtime AttrMask = 16
-	AttrSize  AttrMask = 32
-	AttrCtime AttrMask = 64
+	GetAttrFlagNone GetAttrFlag = 0
 )
 
 //    int rgw_getattr(rgw_fs *fs,
 //                    rgw_file_handle *fh, stat *st,
 //                    uint32_t flags)
-func (fs *FS) GetAttr(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
+func (fs *FS) GetAttr(fh *FileHandle, flags GetAttrFlag) (*syscall.Stat_t, error) {
 	var stat C.struct_stat
 	if ret := C.rgw_getattr(fs.rgwFS, fh.handle, &stat, C.uint32_t(flags)); ret == 0 {
 		st := syscall.Stat_t{
@@ -543,9 +634,15 @@ func (fs *FS) GetAttr(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
 	}
 }
 
+type SetAttrFlag uint32
+
+const (
+	SetAttrFlagNone SetAttrFlag = 0
+)
+
 //    int rgw_setattr(rgw_fs *fs, rgw_file_handle *fh, stat *st,
 //                    uint32_t mask, uint32_t flags)
-func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask AttrMask, flags uint32) error {
+func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask AttrMask, flags SetAttrFlag) error {
 	st := C.struct_stat{
 		st_dev:     C.uint64_t(stat.Dev),
 		st_ino:     C.uint64_t(stat.Ino),
