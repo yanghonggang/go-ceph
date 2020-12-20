@@ -194,10 +194,18 @@ func goCommonReadDirCallback(name *C.char, arg unsafe.Pointer, offset C.uint64_t
 			Size:    int64(stat.st_size),
 			Blksize: int64(stat.st_blksize),
 			Blocks:  int64(stat.st_blocks),
-			// FIXME
-			//	st.Atim = st.st_atime
-			//	st.Mtim = st.st_mtime
-			//	st.Ctim = st.st_ctime
+			Atim: syscall.Timespec{
+				Sec:  int64(stat.st_atim.tv_sec),
+				Nsec: int64(stat.st_atim.tv_nsec),
+			},
+			Mtim: syscall.Timespec{
+				Sec:  int64(stat.st_mtim.tv_sec),
+				Nsec: int64(stat.st_mtim.tv_nsec),
+			},
+			Ctim: syscall.Timespec{
+				Sec:  int64(stat.st_ctim.tv_sec),
+				Nsec: int64(stat.st_ctim.tv_nsec),
+			},
 		}
 	}
 	return cb.Callback(C.GoString(name), &st, uint32(mask), uint32(flags))
@@ -254,10 +262,18 @@ func (fs *FS) Lookup(parentHdl *FileHandle, path string, stMask, flags uint32) (
 			Size:    int64(stat.st_size),
 			Blksize: int64(stat.st_blksize),
 			Blocks:  int64(stat.st_blocks),
-			// FIXME
-			//	st.Atim = st.st_atime
-			//	st.Mtim = st.st_mtime
-			//	st.Ctim = st.st_ctime
+			Atim: syscall.Timespec{
+				Sec:  int64(stat.st_atim.tv_sec),
+				Nsec: int64(stat.st_atim.tv_nsec),
+			},
+			Mtim: syscall.Timespec{
+				Sec:  int64(stat.st_mtim.tv_sec),
+				Nsec: int64(stat.st_mtim.tv_nsec),
+			},
+			Ctim: syscall.Timespec{
+				Sec:  int64(stat.st_ctim.tv_sec),
+				Nsec: int64(stat.st_ctim.tv_nsec),
+			},
 		}
 		return fh, &st, nil
 	} else {
@@ -291,10 +307,18 @@ func (fs *FS) Create(parentHdl *FileHandle, name string, mask, posixFlags, flags
 			Size:    int64(stat.st_size),
 			Blksize: int64(stat.st_blksize),
 			Blocks:  int64(stat.st_blocks),
-			// FIXME
-			//	st.Atim = st.st_atime
-			//	st.Mtim = st.st_mtime
-			//	st.Ctim = st.st_ctime
+			Atim: syscall.Timespec{
+				Sec:  int64(stat.st_atim.tv_sec),
+				Nsec: int64(stat.st_atim.tv_nsec),
+			},
+			Mtim: syscall.Timespec{
+				Sec:  int64(stat.st_mtim.tv_sec),
+				Nsec: int64(stat.st_mtim.tv_nsec),
+			},
+			Ctim: syscall.Timespec{
+				Sec:  int64(stat.st_ctim.tv_sec),
+				Nsec: int64(stat.st_ctim.tv_nsec),
+			},
 		}
 		return fh, &st, nil
 	} else {
@@ -329,10 +353,18 @@ func (fs *FS) Mkdir(parentHdl *FileHandle, name string, mask, flags uint32) (
 			Size:    int64(stat.st_size),
 			Blksize: int64(stat.st_blksize),
 			Blocks:  int64(stat.st_blocks),
-			// FIXME
-			//	st.Atim = st.st_atime
-			//	st.Mtim = st.st_mtime
-			//	st.Ctim = st.st_ctime
+			Atim: syscall.Timespec{
+				Sec:  int64(stat.st_atim.tv_sec),
+				Nsec: int64(stat.st_atim.tv_nsec),
+			},
+			Mtim: syscall.Timespec{
+				Sec:  int64(stat.st_mtim.tv_sec),
+				Nsec: int64(stat.st_mtim.tv_nsec),
+			},
+			Ctim: syscall.Timespec{
+				Sec:  int64(stat.st_ctim.tv_sec),
+				Nsec: int64(stat.st_ctim.tv_nsec),
+			},
 		}
 		return fh, &st, nil
 	} else {
@@ -492,10 +524,18 @@ func (fs *FS) GetAttr(fh *FileHandle, flags uint32) (*syscall.Stat_t, error) {
 			Size:    int64(stat.st_size),
 			Blksize: int64(stat.st_blksize),
 			Blocks:  int64(stat.st_blocks),
-			// FIXME
-			//	st.Atim = st.st_atime
-			//	st.Mtim = st.st_mtime
-			//	st.Ctim = st.st_ctime
+			Atim: syscall.Timespec{
+				Sec:  int64(stat.st_atim.tv_sec),
+				Nsec: int64(stat.st_atim.tv_nsec),
+			},
+			Mtim: syscall.Timespec{
+				Sec:  int64(stat.st_mtim.tv_sec),
+				Nsec: int64(stat.st_mtim.tv_nsec),
+			},
+			Ctim: syscall.Timespec{
+				Sec:  int64(stat.st_ctim.tv_sec),
+				Nsec: int64(stat.st_ctim.tv_nsec),
+			},
 		}
 		return &st, nil
 	} else {
@@ -517,6 +557,18 @@ func (fs *FS) SetAttr(fh *FileHandle, stat *syscall.Stat_t, mask AttrMask, flags
 		st_size:    C.int64_t(stat.Size),
 		st_blksize: C.int64_t(stat.Blksize),
 		st_blocks:  C.int64_t(stat.Blocks),
+		st_atim: C.struct_timespec{
+			tv_sec:  C.long(stat.Atim.Sec),
+			tv_nsec: C.long(stat.Atim.Nsec),
+		},
+		st_mtim: C.struct_timespec{
+			tv_sec:  C.long(stat.Mtim.Sec),
+			tv_nsec: C.long(stat.Mtim.Nsec),
+		},
+		st_ctim: C.struct_timespec{
+			tv_sec:  C.long(stat.Ctim.Sec),
+			tv_nsec: C.long(stat.Ctim.Nsec),
+		},
 	}
 
 	if ret := C.rgw_setattr(fs.rgwFS, fh.handle, &st, C.uint32_t(mask),
