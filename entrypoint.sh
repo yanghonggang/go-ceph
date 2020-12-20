@@ -188,6 +188,7 @@ test_go_ceph() {
 
     P=github.com/ceph/go-ceph
     pkgs=(\
+        "rgw" \
         "cephfs" \
         "cephfs/admin" \
         "internal/callbacks" \
